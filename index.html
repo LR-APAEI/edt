@@ -246,11 +246,11 @@ body.edu-mode .add-act-btn,.edu-mode .s-addcolbtn,.edu-mode .rp-add{display:none
       <div class="logo-sub">Emploi du Temps</div>
     </div>
     <div class="login-label">Connexion</div>
-    <button class="login-btn admin" onclick="openPw('admin')">
+    <button class="login-btn admin" onclick="openPw()">
       Administrateur
       <span class="btn-role">Accès complet — gestion à distance</span>
     </button>
-    <button class="login-btn edu" onclick="openPw('edu')">
+    <button class="login-btn edu" onclick="loginEduDirect()">
       Educateur — Consultation
       <span class="btn-role">Affichage et placement des jeunes</span>
     </button>
@@ -397,7 +397,7 @@ body.edu-mode .add-act-btn,.edu-mode .s-addcolbtn,.edu-mode .rp-add{display:none
 // CONFIGURATION
 // ════════════════════════════════════════════════
 var FB = 'https://emploi-du-temps-c6063-default-rtdb.europe-west1.firebasedatabase.app';
-var ADMIN_PW = 'apaei2024';   // Mot de passe administrateur
+var ADMIN_PW = 'EDT2026';   // Mot de passe administrateur
 
 // Sites et catégories
 var SITES = {
@@ -636,33 +636,20 @@ function setSS(s){
 // LOGIN
 // ════════════════════════════════════════════════
 var _pwTarget=null;
-function openPw(target){
-  _pwTarget=target;
+function openPw(){
   var el=document.getElementById('pw-modal');
   document.getElementById('pw-inp').value='';
   document.getElementById('pw-err').style.display='none';
-  if(target==='admin'){
-    document.getElementById('pw-title').textContent='Accès administrateur';
-    document.getElementById('pw-desc').textContent='Entrez le mot de passe administrateur.';
-  } else {
-    document.getElementById('pw-title').textContent='Accès educateur';
-    document.getElementById('pw-desc').textContent='Entrez votre mot de passe personnel.';
-  }
+  document.getElementById('pw-title').textContent='Accès administrateur';
+  document.getElementById('pw-desc').textContent='Entrez le mot de passe administrateur.';
   el.classList.add('show');
   setTimeout(function(){document.getElementById('pw-inp').focus();},80);
 }
 function closePw(){ document.getElementById('pw-modal').classList.remove('show'); }
 function doPw(){
   var pw=document.getElementById('pw-inp').value.trim();
-  if(_pwTarget==='admin'){
-    if(pw===ADMIN_PW){ closePw(); loginAdmin(); }
-    else showPwErr();
-  } else {
-    // Check edu accounts
-    var acc=(S.eduAccounts||[]).find(function(a){return a.pw===pw;});
-    if(acc){ closePw(); loginEdu(acc); }
-    else showPwErr();
-  }
+  if(pw===ADMIN_PW){ closePw(); loginAdmin(); }
+  else showPwErr();
 }
 function showPwErr(){
   document.getElementById('pw-err').style.display='block';
@@ -685,10 +672,14 @@ function loginAdmin(){
   showSchedule();
 }
 
+function loginEduDirect(){
+  // No password - direct access to both sites
+  loginEdu({id:'direct',name:'Educateur',sites:['clem','rdh']});
+}
 function loginEdu(acc){
   session.role='edu';
   session.eduId=acc.id;
-  session.allowedSites=acc.sites||['clem'];
+  session.allowedSites=acc.sites||['clem','rdh'];
   document.body.classList.remove('is-admin');
   document.body.classList.add('edu-mode');
   document.getElementById('screen-login').style.display='none';
