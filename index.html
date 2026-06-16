@@ -352,24 +352,6 @@ body.edu-mode .add-act-btn,.edu-mode .s-addcolbtn,.edu-mode .rp-add{display:none
 <div id="screen-admin" style="display:none;flex-direction:column">
 
   <div class="admin-section">
-    <h2>Comptes educateurs</h2>
-    <div class="form-row">
-      <input type="text" id="edu-name-inp" placeholder="Prénom Nom">
-      <select id="edu-site-inp">
-        <option value="clem">Clemenceau</option>
-        <option value="rdh">Route d'Honfleur</option>
-        <option value="both">Les deux</option>
-      </select>
-      <input type="password" id="edu-pw-inp" placeholder="Mot de passe">
-      <button class="fbtn fbtn-blue" onclick="addEduAccount()">Ajouter</button>
-    </div>
-    <table class="admin-table" id="edu-accounts-table">
-      <thead><tr><th>Nom</th><th>Accès</th><th>Actions</th></tr></thead>
-      <tbody id="edu-accounts-body"></tbody>
-    </table>
-  </div>
-
-  <div class="admin-section">
     <h2>Sauvegarde hebdomadaire</h2>
     <p style="font-size:13px;color:var(--gray);margin-bottom:12px">Les données sont sauvegardées automatiquement. Vous pouvez aussi créer une sauvegarde manuelle.</p>
     <div class="form-row">
@@ -624,6 +606,28 @@ function sanitizePersons(ps){
 function sanitizeAll(data){
   if(!data)return;
   if(data.data){
+    // ── Migration : ancienne structure _persons → nouvelle structure par site ──
+    if(data.data._persons){
+      var old=data.data._persons;
+      // Copier dans clem si pas encore de persons
+      if(!data.data.clem)data.data.clem={acts:[],cols:{},cells:{},persons:{young:[],edu:[]}};
+      if(!data.data.clem.persons||(!sanitizeArr(data.data.clem.persons.young).length&&!sanitizeArr(data.data.clem.persons.edu).length)){
+        data.data.clem.persons={
+          young:sanitizeArr(old.young),
+          edu:sanitizeArr(old.edu)
+        };
+      }
+      // Copier dans rdh si pas encore de persons
+      if(!data.data.rdh)data.data.rdh={persons:{young:[],edu:[]}};
+      if(!data.data.rdh.persons||(!sanitizeArr(data.data.rdh.persons.young).length&&!sanitizeArr(data.data.rdh.persons.edu).length)){
+        data.data.rdh.persons={
+          young:sanitizeArr(old.young),
+          edu:sanitizeArr(old.edu)
+        };
+      }
+      // Supprimer l'ancienne clé pour ne pas re-migrer
+      delete data.data._persons;
+    }
     if(data.data.clem){
       data.data.clem=sanitizeSched(data.data.clem);
       data.data.clem.persons=sanitizePersons(data.data.clem.persons);
@@ -828,6 +832,10 @@ function showCatScreen(sid){
   hideAllScreens();
   document.getElementById('screen-cat').style.display='flex';
   document.getElementById('cat-site-label').textContent=SITES[sid].name+' — Catégories';
+  // Le bouton "Retour aux etablissements" n'a de sens que pour l'educateur
+  // (l'admin navigue via les onglets du haut)
+  var backBtn=document.querySelector('.cat-back');
+  if(backBtn)backBtn.style.display=(session.role==='admin')?'none':'flex';
   var grid=document.getElementById('cat-grid');
   grid.innerHTML='';
   SITES[sid].cats.forEach(function(cat){
@@ -1105,39 +1113,10 @@ function buildDay(dayId){
 // ADMIN PANEL
 // ════════════════════════════════════════════════
 function renderAdmin(){
-  var tbody=document.getElementById('edu-accounts-body');
-  var accs=S.eduAccounts||[];
-  tbody.innerHTML=accs.map(function(a){
-    var siteLabel=a.sites.indexOf('both')>-1?'Les deux':a.sites.map(function(s){return SITES[s]?SITES[s].name:s;}).join(', ');
-    return '<tr><td>'+a.name+'</td><td><span class="tag tag-blue">'+siteLabel+'</span></td>'+
-      '<td><button class="fbtn fbtn-red" style="font-size:11px;padding:4px 10px" onclick="delEduAccount(\''+a.id+'\')">Supprimer</button></td></tr>';
-  }).join('')||'<tr><td colspan="3" style="color:var(--gray);font-size:13px">Aucun compte éducateur.</td></tr>';
-
   // Backup log
   var log=document.getElementById('save-log');
   var bk=S.backups||[];
   log.textContent=bk.length?'Dernière sauvegarde : '+bk[bk.length-1].date:'Aucune sauvegarde enregistrée.';
-}
-
-function addEduAccount(){
-  var name=document.getElementById('edu-name-inp').value.trim();
-  var site=document.getElementById('edu-site-inp').value;
-  var pw=document.getElementById('edu-pw-inp').value.trim();
-  if(!name||!pw){ntf('Remplissez tous les champs.');return;}
-  if(!S.eduAccounts)S.eduAccounts=[];
-  S.eduAccounts.push({id:uid(),name:name,sites:site==='both'?['clem','rdh']:[site],pw:pw});
-  document.getElementById('edu-name-inp').value='';
-  document.getElementById('edu-pw-inp').value='';
-  saveToFirebase();
-  renderAdmin();
-  ntf('Compte créé.');
-}
-
-function delEduAccount(id){
-  if(!confirm('Supprimer ce compte ?'))return;
-  S.eduAccounts=(S.eduAccounts||[]).filter(function(a){return a.id!==id;});
-  saveToFirebase();
-  renderAdmin();
 }
 
 function manualSave(){
