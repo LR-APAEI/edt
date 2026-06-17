@@ -584,10 +584,12 @@ function deletePhoto(id){
 function getPhoto(id){return _photos[id]||'';}
 
 // Charger toutes les photos depuis Firebase /photos (une seule fois au démarrage)
+var _photosLoaded=false;
 function loadPhotosFromFirebase(cb){
+  if(_photosLoaded){if(cb)cb();return;} // ne charger qu'une seule fois
   fbRead('/photos',function(err,data){
+    _photosLoaded=true;
     if(err||!data){if(cb)cb();return;}
-    // data = {id1: base64, id2: base64, ...}
     var photos=data;
     if(typeof photos==='object'&&!Array.isArray(photos)){
       Object.keys(photos).forEach(function(id){
@@ -662,18 +664,23 @@ function startSSE(){startPolling();}
 
 function startPolling(){
   if(syncTimer)clearInterval(syncTimer);
+  var _errCount=0;
   syncTimer=setInterval(function(){
     if(_saving)return;
     fbRead('/edt',function(err,data){
-      if(err){setSS('err');return;}
+      if(err){
+        _errCount++;
+        if(_errCount<=3)setSS('spin');
+        else setSS('err');
+        return;
+      }
+      _errCount=0;
       if(!data)return;
       var h=dataHash(data);
-      if(h===_lastHash)return;
+      if(h===_lastHash){setSS('ok');return;}
       _lastHash=h;
-      // Réinjecter photos locales dans les données reçues
       sanitizeAll(data);
       S=Object.assign(S,data);
-      // Réinjecter photos locales (elles ne viennent pas du poll)
       function pollReinject(obj){
         if(!obj||typeof obj!=='object')return;
         if(Array.isArray(obj)){obj.forEach(pollReinject);return;}
