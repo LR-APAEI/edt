@@ -552,10 +552,11 @@ function cntP(type,id){
 // ════════════════════════════════════════════════
 // FIREBASE
 // ════════════════════════════════════════════════
+// ── Firebase REST helpers ──
 function fbRead(path,cb){
   var xhr=new XMLHttpRequest();
   xhr.open('GET',FB+path+'.json?t='+Date.now(),true);
-  xhr.timeout=8000;
+  xhr.timeout=10000;
   xhr.onreadystatechange=function(){
     if(xhr.readyState!==4)return;
     if(xhr.status===200){try{cb(null,JSON.parse(xhr.responseText));}catch(e){cb(e,null);}}
@@ -568,7 +569,7 @@ function fbWrite(path,data,cb){
   var xhr=new XMLHttpRequest();
   xhr.open('PUT',FB+path+'.json',true);
   xhr.setRequestHeader('Content-Type','application/json');
-  xhr.timeout=8000;
+  xhr.timeout=10000;
   xhr.onreadystatechange=function(){
     if(xhr.readyState!==4)return;
     if(xhr.status===200){if(cb)cb(null);}
@@ -576,6 +577,71 @@ function fbWrite(path,data,cb){
   };
   xhr.ontimeout=xhr.onerror=function(){if(cb)cb(new Error('network'));};
   xhr.send(JSON.stringify(data));
+}
+
+// ── Firebase SSE (temps réel) ──
+var sseSource=null;
+var sseBuffer='';
+function startSSE(){
+  if(sseSource){sseSource.close();sseSource=null;}
+  sseBuffer='';
+  try{
+    sseSource=new EventSource(FB+'/edt.json?stream=true&v=3');
+    sseSource.onopen=function(){setSS('ok');};
+    sseSource.onerror=function(){
+      setSS('err');
+      // Reconnect after 5s
+      if(sseSource){sseSource.close();sseSource=null;}
+      setTimeout(startSSE,5000);
+    };
+    sseSource.addEventListener('put',function(e){
+      try{
+        var msg=JSON.parse(e.data);
+        if(!msg||!msg.data)return;
+        var data=msg.path==='/'?msg.data:null;
+        if(!data)return;
+        // Only update from remote if we are not currently saving
+        if(_saving)return;
+        sanitizeAll(data);
+        S=Object.assign(S,data);
+        try{localStorage.setItem('apaei-edt',JSON.stringify(S));}catch(ex){}
+        setSS('ok');
+        render();
+      }catch(ex){console.warn('SSE parse error',ex);}
+    });
+    sseSource.addEventListener('patch',function(e){
+      try{
+        var msg=JSON.parse(e.data);
+        if(!msg||!msg.data)return;
+        // Patch: re-fetch full state to stay consistent
+        fbRead('/edt',function(err,data){
+          if(err||!data)return;
+          if(_saving)return;
+          sanitizeAll(data);
+          S=Object.assign(S,data);
+          try{localStorage.setItem('apaei-edt',JSON.stringify(S));}catch(ex){}
+          setSS('ok');
+          render();
+        });
+      }catch(ex){}
+    });
+  }catch(ex){
+    // SSE not supported, fallback to polling
+    console.warn('SSE not supported, falling back to polling');
+    startPolling();
+  }
+}
+var _saving=false;
+function startPolling(){
+  if(syncTimer)clearInterval(syncTimer);
+  syncTimer=setInterval(function(){
+    if(_saving)return;
+    fbRead('/edt',function(err,data){
+      if(err){setSS('err');return;}
+      if(data){sanitizeAll(data);S=Object.assign(S,data);}
+      setSS('ok');render();
+    });
+  },5000);
 }
 
 function sanitizeArr(v){
@@ -646,23 +712,26 @@ function sanitizeAll(data){
 function loadFromFirebase(){
   setSS('spin');
   fbRead('/edt',function(err,data){
-    if(err){setSS('err');loadLocal();render();return;}
+    if(err){setSS('err');loadLocal();render();startPolling();return;}
     if(data){
       sanitizeAll(data);
       S=Object.assign(S,data);
     } else {
-      // First run: push defaults
       saveToFirebase();
     }
     try{localStorage.setItem('apaei-edt',JSON.stringify(S));}catch(e){}
     setSS('ok');
     render();
+    // Start real-time listener after first load
+    startSSE();
   });
 }
 function saveToFirebase(cb){
+  _saving=true;
   setSS('spin');
   try{localStorage.setItem('apaei-edt',JSON.stringify(S));}catch(e){}
   fbWrite('/edt',S,function(err){
+    _saving=false;
     setSS(err?'err':'ok');
     if(cb)cb(err);
   });
@@ -672,15 +741,8 @@ function loadLocal(){
 }
 function startSync(){
   loadFromFirebase();
-  if(syncTimer)clearInterval(syncTimer);
-  syncTimer=setInterval(function(){
-    fbRead('/edt',function(err,data){
-      if(err){setSS('err');return;}
-      if(data){sanitizeAll(data);S=Object.assign(S,data);}
-      setSS('ok');
-      render();
-    });
-  },60000);
+  // After initial load, start SSE for real-time updates
+  // SSE will push changes from other devices instantly
 }
 function setSS(s){
   var el=document.getElementById('sync-badge');
@@ -782,6 +844,7 @@ function showSiteChoice(){
 
 function doLogout(){
   if(syncTimer)clearInterval(syncTimer);
+  if(sseSource){sseSource.close();sseSource=null;}
   session={role:null,siteId:null,catId:null,eduId:null,allowedSites:[]};
   document.body.classList.remove('is-admin','edu-mode');
   hideAllScreens();
