@@ -579,69 +579,39 @@ function fbWrite(path,data,cb){
   xhr.send(JSON.stringify(data));
 }
 
-// ── Firebase SSE (temps réel) ──
-var sseSource=null;
-var sseBuffer='';
-function startSSE(){
-  if(sseSource){sseSource.close();sseSource=null;}
-  sseBuffer='';
-  try{
-    sseSource=new EventSource(FB+'/edt.json?stream=true&v=3');
-    sseSource.onopen=function(){setSS('ok');};
-    sseSource.onerror=function(){
-      setSS('err');
-      // Reconnect after 5s
-      if(sseSource){sseSource.close();sseSource=null;}
-      setTimeout(startSSE,5000);
-    };
-    sseSource.addEventListener('put',function(e){
-      try{
-        var msg=JSON.parse(e.data);
-        if(!msg||!msg.data)return;
-        var data=msg.path==='/'?msg.data:null;
-        if(!data)return;
-        // Only update from remote if we are not currently saving
-        if(_saving)return;
-        sanitizeAll(data);
-        S=Object.assign(S,data);
-        try{localStorage.setItem('apaei-edt',JSON.stringify(S));}catch(ex){}
-        setSS('ok');
-        render();
-      }catch(ex){console.warn('SSE parse error',ex);}
-    });
-    sseSource.addEventListener('patch',function(e){
-      try{
-        var msg=JSON.parse(e.data);
-        if(!msg||!msg.data)return;
-        // Patch: re-fetch full state to stay consistent
-        fbRead('/edt',function(err,data){
-          if(err||!data)return;
-          if(_saving)return;
-          sanitizeAll(data);
-          S=Object.assign(S,data);
-          try{localStorage.setItem('apaei-edt',JSON.stringify(S));}catch(ex){}
-          setSS('ok');
-          render();
-        });
-      }catch(ex){}
-    });
-  }catch(ex){
-    // SSE not supported, fallback to polling
-    console.warn('SSE not supported, falling back to polling');
-    startPolling();
-  }
-}
+// ── Sync automatique toutes les 3 secondes ──
 var _saving=false;
+var _lastHash='';
+
+function dataHash(d){
+  // Simple hash to detect real changes and avoid useless re-renders
+  try{
+    var s=JSON.stringify(d);
+    var h=0;
+    for(var i=0;i<Math.min(s.length,500);i++){h=((h<<5)-h)+s.charCodeAt(i);h|=0;}
+    return h+'_'+s.length;
+  }catch(e){return '';}
+}
+
+function startSSE(){startPolling();}  // alias
+
 function startPolling(){
   if(syncTimer)clearInterval(syncTimer);
   syncTimer=setInterval(function(){
     if(_saving)return;
     fbRead('/edt',function(err,data){
       if(err){setSS('err');return;}
-      if(data){sanitizeAll(data);S=Object.assign(S,data);}
-      setSS('ok');render();
+      if(!data)return;
+      var h=dataHash(data);
+      if(h===_lastHash)return; // rien de nouveau, pas de re-render
+      _lastHash=h;
+      sanitizeAll(data);
+      S=Object.assign(S,data);
+      try{localStorage.setItem('apaei-edt',JSON.stringify(S));}catch(ex){}
+      setSS('ok');
+      render();
     });
-  },5000);
+  },3000);
 }
 
 function sanitizeArr(v){
@@ -719,19 +689,22 @@ function loadFromFirebase(){
     } else {
       saveToFirebase();
     }
+    _lastHash=dataHash(S);
     try{localStorage.setItem('apaei-edt',JSON.stringify(S));}catch(e){}
     setSS('ok');
     render();
-    // Start real-time listener after first load
-    startSSE();
+    // Démarrer la sync automatique
+    startPolling();
   });
 }
 function saveToFirebase(cb){
   _saving=true;
   setSS('spin');
   try{localStorage.setItem('apaei-edt',JSON.stringify(S));}catch(e){}
-  fbWrite('/edt',S,function(err){
+  var snap=JSON.parse(JSON.stringify(S));
+  fbWrite('/edt',snap,function(err){
     _saving=false;
+    if(!err)_lastHash=dataHash(snap); // évite un re-render inutile au prochain poll
     setSS(err?'err':'ok');
     if(cb)cb(err);
   });
