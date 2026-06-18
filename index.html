@@ -984,9 +984,10 @@ function showSiteChoice(){
 }
 
 function doLogout(){
-  if(syncTimer)clearInterval(syncTimer);
-  if(sseSource){sseSource.close();sseSource=null;}
+  if(syncTimer){clearInterval(syncTimer);syncTimer=null;}
   session={role:null,siteId:null,catId:null,eduId:null,allowedSites:[]};
+  currentDay='lun';
+  currentPeriod='am';
   document.body.classList.remove('is-admin','edu-mode');
   hideAllScreens();
   document.getElementById('topbar').style.display='none';
