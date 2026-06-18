@@ -553,19 +553,33 @@ function getP(type,id){ return (type==='young'?getYoungs():getEdus()).find(funct
 
 function cntP(type,id){
   var n=0;
-  var schedules=[];
-  if(session.siteId==='clem') schedules=[S.data.clem];
-  else if(session.siteId==='rdh') schedules=SITES.rdh.cats.map(function(cat){return S.data.rdh[cat.id];});
-  schedules.forEach(function(sched){
-    if(!sched)return;
-    if(type==='young'){
-      Object.values(sched.cells||{}).forEach(function(arr){if(Array.isArray(arr))arr.forEach(function(i){if(i===id)n++;});});
-    } else {
-      Object.values(sched.cols||{}).forEach(function(v){
-        if(Array.isArray(v))v.forEach(function(c){if(c&&Array.isArray(c.e))c.e.forEach(function(i){if(i===id)n++;});});
-      });
-    }
-  });
+  var d=cur();if(!d)return 0;
+  // Compter uniquement pour le jour courant
+  if(type==='young'){
+    Object.keys(d.cells||{}).forEach(function(k){
+      // k = dayId__colId__slotId — filtrer par currentDay
+      if(k.indexOf(currentDay+'__')===0){
+        var arr=d.cells[k];
+        if(Array.isArray(arr))arr.forEach(function(i){if(i===id)n++;});
+      }
+    });
+    // Aussi compter les fusions de colonnes pour ce jour
+    Object.keys(d.cells||{}).forEach(function(k){
+      if(k.indexOf(currentDay+'__')===0&&(k.indexOf('AMALL')>0||k.indexOf('PMALL')>0)){
+        var arr=d.cells[k];
+        if(Array.isArray(arr))arr.forEach(function(i){if(i===id)n++;});
+      }
+    });
+  } else {
+    // Educateurs: compter les colonnes du jour courant
+    var cols=sanitizeArr(d.cols?d.cols[currentDay]:null);
+    cols.forEach(function(col){
+      if(col&&Array.isArray(col.e))col.e.forEach(function(i){if(i===id)n++;});
+    });
+    // Aussi la colonne sortie du jour courant
+    var se=sanitizeArr(d.cols?d.cols[currentDay+'_se']:null);
+    se.forEach(function(i){if(i===id)n++;});
+  }
   return n;
 }
 
@@ -702,7 +716,7 @@ function startPolling(){
       setSS('ok');
       render();
     });
-  },4000);
+  },1000);
 }
 
 function sanitizeArr(v){
