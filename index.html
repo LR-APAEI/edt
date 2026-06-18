@@ -134,6 +134,13 @@ body.is-admin .admin-only{display:block}
 .s-colhead{background:var(--white);vertical-align:top;padding:0;width:auto}
 .s-colinner{padding:7px 8px 6px;display:flex;flex-direction:column;gap:5px}
 .s-sortiecol{background:#f9fafb;width:auto}
+.s-absentcol{background:#fff5f5;width:auto}
+.s-absent-lbl{font-size:11px;font-weight:700;padding:3px 8px;border-radius:4px;background:#fee2e2;color:#b91c1c;border:1px solid #fca5a5;display:inline-block}
+.absent-zone{min-height:72px;border-radius:5px;padding:6px;background:#fff5f5;border:1px solid #fca5a5;display:flex;flex-direction:row;flex-wrap:wrap;gap:6px;align-items:center;justify-content:center}
+.absent-zone *{pointer-events:none}
+.absent-zone.dov{background:#fee2e2;border-color:#b91c1c}
+.absent-hint{font-size:9px;color:#b91c1c;font-style:italic;opacity:.7;pointer-events:none}
+.s-cell.absent{background:#fff5f5}
 .s-sortie-lbl{font-size:11px;font-weight:700;padding:3px 8px;border-radius:4px;background:#f3f4f6;color:var(--gray);border:1px solid var(--gray-border);display:inline-block}
 .edu-zone{min-height:72px;border-radius:5px;padding:6px;background:#fffbeb;border:1px solid #d97706;display:flex;flex-direction:row;flex-wrap:wrap;gap:6px;align-items:center;justify-content:center}
 .edu-zone *{pointer-events:none}
@@ -478,6 +485,7 @@ var SLOTS_RDH = [
 ];
 
 var SC = '__sortie__'; // colonne sortie fixe
+var AC = '__absent__'; // colonne absents fixe
 
 // ════════════════════════════════════════════════
 // ÉTAT APPLICATION
@@ -557,15 +565,7 @@ function cntP(type,id){
   // Compter uniquement pour le jour courant
   if(type==='young'){
     Object.keys(d.cells||{}).forEach(function(k){
-      // k = dayId__colId__slotId — filtrer par currentDay
       if(k.indexOf(currentDay+'__')===0){
-        var arr=d.cells[k];
-        if(Array.isArray(arr))arr.forEach(function(i){if(i===id)n++;});
-      }
-    });
-    // Aussi compter les fusions de colonnes pour ce jour
-    Object.keys(d.cells||{}).forEach(function(k){
-      if(k.indexOf(currentDay+'__')===0&&(k.indexOf('AMALL')>0||k.indexOf('PMALL')>0)){
         var arr=d.cells[k];
         if(Array.isArray(arr))arr.forEach(function(i){if(i===id)n++;});
       }
@@ -1244,7 +1244,7 @@ function buildDay(dayId){
   var sortieSlot=allSlots.find(function(s){return s.sortie;});
   var dayL=DAYS.find(function(x){return x.id===dayId;}).l;
   var se=sanitizeArr(d.cols?d.cols[dayId+'_se']:null);
-  var nc=cols.length+3;
+  var nc=cols.length+4;
 
   var navHtml='<div class="period-nav">'+
     '<button class="period-arrow" onclick="setPeriod(\'am\')"'+(currentPeriod==='am'?' disabled':'')+'>\u2190 Matin</button>'+
@@ -1298,6 +1298,11 @@ function buildDay(dayId){
     '<div class="edu-zone" ondragover="aD(event)" ondrop="dropE(\''+dayId+'\',\''+SC+'\',event)" ondragenter="ezIn(this,event)" ondragleave="ezOut(this,event)">'+
       (secE||'<span class="edu-hint">Déposer éducateur</span>')+
     '</div><span class="s-sortie-lbl">Sortie extérieure</span></div></td>';
+  // Colonne ABSENTS fixe
+  h+='<td class="s-colhead s-absentcol"><div class="s-colinner">'+
+    '<div class="absent-zone" style="min-height:30px"><span class="absent-hint">—</span></div>'+
+    '<span class="s-absent-lbl">Absents</span>'+
+  '</div></td>';
   h+='<td class="s-addcol"><button class="s-addcolbtn admin-only" onclick="addCol(\''+dayId+'\')">+ Colonne</button></td>';
   h+='</tr></thead><tbody>';
 
@@ -1402,6 +1407,15 @@ function buildDay(dayId){
         '<button class="cx admin-only" onclick="rmY(\''+sk+'\',\''+yid+'\',event)">✕</button></div>';
     }).join('');
     h+='<td class="s-cell sortie"><div class="drop" ondragover="aD(event)" ondrop="dropY(\''+sk+'\',event)" ondragenter="dzIn(this,event)" ondragleave="dzOut(this,event)">'+sc2+'</div></td>';
+    // Cellule absents
+    var ak=ck(dayId,AC,slot.id);
+    var absChips=sanitizeArr(d.cells[ak]||[]).map(function(yid){
+      var y=getP('young',yid);if(!y)return'';
+      return '<div class="chip" title="'+y.n+'" draggable="true" ondragstart="sD(\''+yid+'\',\'young\',\''+ak+'\',event)" ondragend="eD(event)">'+
+        '<div class="chav">'+(y.p?'<img src="'+y.p+'">':ini(y.n))+'</div>'+
+        '<button class="cx admin-only" onclick="rmY(\''+ak+'\',\''+yid+'\',event)">✕</button></div>';
+    }).join('');
+    h+='<td class="s-cell absent"><div class="drop" ondragover="aD(event)" ondrop="dropY(\''+ak+'\',event)" ondragenter="dzIn(this,event)" ondragleave="dzOut(this,event)">'+absChips+'</div></td>';
     h+='<td style="background:var(--gray-light)"></td></tr>';
   });
 
