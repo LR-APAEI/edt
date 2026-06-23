@@ -104,7 +104,7 @@ a{color:var(--blue);text-decoration:none}
 .page{display:none}.page.on{display:block}
 
 /* ── RIGHT PANEL ── */
-#rpanel{width:200px;background:var(--white);border-left:1px solid var(--gray-border);display:flex;flex-direction:column;flex-shrink:0;overflow:hidden}
+#rpanel{width:220px;background:var(--white);border-left:1px solid var(--gray-border);display:flex;flex-direction:column;flex-shrink:0;overflow:hidden}
 .rp-tabs{display:flex;border-bottom:1px solid var(--gray-border)}
 .rptab{flex:1;padding:8px 4px;font-size:11px;font-weight:700;text-align:center;border:none;background:none;color:var(--gray);border-bottom:2px solid transparent}
 .rptab.on{color:var(--blue);border-bottom-color:var(--blue)}
@@ -270,13 +270,50 @@ body:not(.is-admin) .s-merge-btn{pointer-events:none}
 
 /* ── EDU MODE ── */
 body.edu-mode .admin-only{display:none!important}
+/* Admin RDV : accès limité aux rendez-vous uniquement */
+body.is-admin-rdv .admin-only{display:none!important}
+body.is-admin-rdv .rdv-only{display:block!important}
+body.is-admin .rdv-only{display:block!important}
+.rdv-only{display:none}
 body.edu-mode .act-lbl{cursor:default;pointer-events:none}
 body.edu-mode .add-act-btn,.edu-mode .s-addcolbtn,.edu-mode .rp-add{display:none}
 /* Les educateurs peuvent déplacer et supprimer des jeunes dans le tableau */
 body.edu-mode .chip .cx{opacity:0}
 body.edu-mode .chip:hover .cx{opacity:1}
 
-/* ── MODULE TRANSPORT ── */
+/* ── MODULE RDV ── */
+.rdv-bubble{position:absolute;top:-8px;left:-8px;width:20px;height:20px;border-radius:50%;background:#7c3aed;color:var(--white);font-size:10px;display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:10;border:2px solid var(--white);box-shadow:0 2px 6px rgba(0,0,0,.3);pointer-events:auto!important;flex-shrink:0}
+.rdv-bubble:hover{transform:scale(1.2)}
+.rdv-slot{position:relative}
+.s-cell.rdv-slot{overflow:visible}
+.rdv-list{display:flex;flex-direction:column;gap:6px;padding:8px 0}
+.rdv-item{background:#f5f3ff;border:1.5px solid #c4b5fd;border-radius:8px;padding:8px 10px;position:relative}
+.rdv-item-header{display:flex;align-items:center;gap:8px;margin-bottom:4px}
+.rdv-item-avatar{width:28px;height:28px;border-radius:50%;background:#e5e7eb;overflow:hidden;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:var(--gray)}
+.rdv-item-avatar img{width:100%;height:100%;object-fit:cover}
+.rdv-item-name{font-weight:700;font-size:12px;color:#4c1d95}
+.rdv-item-motif{font-size:11px;color:#6b7280}
+.rdv-item-time{font-size:10px;color:#7c3aed;font-weight:600}
+.rdv-del{position:absolute;top:6px;right:6px;background:none;border:none;color:#b91c1c;font-size:12px;cursor:pointer;opacity:.5}
+.rdv-del:hover{opacity:1}
+#screen-rdv{display:none;flex:1;overflow:auto;flex-direction:column;background:var(--white)}
+.rdv-screen-header{background:#7c3aed;color:var(--white);padding:14px 20px;display:flex;align-items:center;gap:14px;flex-shrink:0}
+.rdv-day-section{margin-bottom:20px}
+.rdv-day-title{font-size:13px;font-weight:700;color:#4c1d95;padding:8px 0;border-bottom:2px solid #e9d5ff;margin-bottom:10px}
+.rdv-card{background:#faf5ff;border:1.5px solid #e9d5ff;border-radius:8px;padding:12px;margin-bottom:8px;display:flex;align-items:flex-start;gap:12px;position:relative}
+.rdv-card-avatar{width:48px;height:48px;border-radius:50%;background:#e5e7eb;overflow:hidden;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;color:var(--gray)}
+.rdv-card-avatar img{width:100%;height:100%;object-fit:cover}
+.rdv-card-info{flex:1}
+.rdv-card-name{font-size:14px;font-weight:700;color:#4c1d95;margin-bottom:2px}
+.rdv-card-motif{font-size:13px;color:var(--text);margin-bottom:4px}
+.rdv-card-meta{display:flex;flex-wrap:wrap;gap:6px}
+.rdv-tag{font-size:10px;padding:2px 8px;border-radius:4px;font-weight:600}
+.rdv-tag-time{background:#ede9fe;color:#7c3aed}
+.rdv-tag-edu{background:#dbeafe;color:#1d4ed8}
+.rdv-tag-dur{background:#f0fdf4;color:#16a34a}
+.rdv-actions{display:flex;gap:4px;position:absolute;top:8px;right:8px}
+
+/* ── MODULE TRANSPORT ── *//* ── MODULE TRANSPORT ── */
 #screen-transport{display:none;flex:1;overflow:auto;flex-direction:column;background:var(--gray-light)}
 .transport-header{background:#374151;color:var(--white);padding:14px 20px;display:flex;align-items:center;gap:14px;flex-shrink:0}
 .transport-header h2{font-size:16px;font-weight:700;flex:1}
@@ -402,6 +439,7 @@ body.edu-mode .chip:hover .cx{opacity:1}
   <span class="top-role" id="role-badge">—</span>
   <span id="sync-badge">—</span>
   <button class="tbtn admin-only" onclick="showAdmin()" id="btn-admin-panel">Gestion</button>
+  <button class="tbtn" onclick="openRdvScreen()" style="background:rgba(124,58,237,.4);border-color:rgba(124,58,237,.6)">RDV</button>
   <button class="tbtn" onclick="openTransport()" style="background:rgba(55,65,81,.4);border-color:rgba(255,255,255,.2)">Transport</button>
   <button class="tbtn admin-only" onclick="window.print()">Imprimer</button>
   <button class="tbtn danger" onclick="doLogout()">Déconnexion</button>
@@ -420,6 +458,16 @@ body.edu-mode .chip:hover .cx{opacity:1}
   </button>
   <div class="cat-header" id="cat-site-label">Route d'Honfleur — Catégories</div>
   <div class="cat-grid" id="cat-grid"></div>
+</div>
+
+<!-- ÉCRAN RDV -->
+<div id="screen-rdv">
+  <div class="rdv-screen-header">
+    <button class="repas-back" onclick="closeRdv()">&#8592; Retour</button>
+    <h2 style="flex:1">Rendez-vous</h2>
+    <button class="repas-back rdv-only" onclick="openAddRdv()" style="background:rgba(255,255,255,.25)">+ Nouveau RDV</button>
+  </div>
+  <div style="padding:16px" id="rdv-list-container"></div>
 </div>
 
 <!-- ÉCRAN TRANSPORT -->
@@ -459,6 +507,34 @@ body.edu-mode .chip:hover .cx{opacity:1}
 
 <!-- ADMIN PANEL -->
 <div id="screen-admin" style="display:none;flex-direction:column">
+
+  <div class="admin-section">
+    <h2>Sécurité Firebase</h2>
+    <p style="font-size:13px;color:var(--gray);margin-bottom:10px">
+      Copiez ces règles dans Firebase Console → Realtime Database → Règles
+    </p>
+    <div style="background:#1e1e1e;color:#4ade80;font-family:monospace;font-size:11px;padding:12px;border-radius:6px;white-space:pre;overflow-x:auto;line-height:1.6">{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    "edt": {
+      ".read": true,
+      ".write": true
+    },
+    "photos": {
+      ".read": true,
+      ".write": true
+    },
+    "backups": {
+      ".read": true,
+      ".write": true
+    }
+  }
+}</div>
+    <div class="form-row" style="margin-top:10px">
+      <a href="https://console.firebase.google.com" target="_blank" class="fbtn fbtn-blue" style="text-decoration:none;padding:7px 14px;display:inline-block">Ouvrir Firebase Console</a>
+    </div>
+  </div>
 
   <div class="admin-section">
     <h2>Sauvegarde hebdomadaire</h2>
@@ -533,6 +609,68 @@ body.edu-mode .chip:hover .cx{opacity:1}
   </div>
 </div>
 
+<!-- Modal RDV -->
+<div id="m-rdv" class="mbk">
+  <div class="modal" style="width:460px">
+    <h3 id="m-rdv-title">Rendez-vous</h3>
+    <input type="hidden" id="rdv-edit-id">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div class="fg">
+        <label>Jeune</label>
+        <select id="rdv-yid" style="width:100%;border:1.5px solid var(--gray-border);border-radius:6px;padding:8px 10px;font-size:14px;font-family:var(--font)"></select>
+      </div>
+      <div class="fg">
+        <label>Jour</label>
+        <select id="rdv-day" style="width:100%;border:1.5px solid var(--gray-border);border-radius:6px;padding:8px 10px;font-size:14px;font-family:var(--font)">
+          <option value="lun">Lundi</option><option value="mar">Mardi</option>
+          <option value="mer">Mercredi</option><option value="jeu">Jeudi</option>
+          <option value="ven">Vendredi</option>
+        </select>
+      </div>
+      <div class="fg">
+        <label>Heure de début</label>
+        <input type="time" id="rdv-heure" value="09:00" style="width:100%;border:1.5px solid var(--gray-border);border-radius:6px;padding:8px 10px;font-size:14px;font-family:var(--font)">
+      </div>
+      <div class="fg">
+        <label>Durée</label>
+        <select id="rdv-duree" style="width:100%;border:1.5px solid var(--gray-border);border-radius:6px;padding:8px 10px;font-size:14px;font-family:var(--font)">
+          <option value="30">30 minutes</option>
+          <option value="60" selected>1 heure</option>
+          <option value="90">1h30</option>
+          <option value="120">2 heures</option>
+          <option value="180">3 heures</option>
+          <option value="0">Toute la journée</option>
+        </select>
+      </div>
+    </div>
+    <div class="fg">
+      <label>Motif du rendez-vous</label>
+      <input type="text" id="rdv-motif" placeholder="Ex: Médecin, Kiné, Dentiste, Famille...">
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div class="fg">
+        <label>Educateur concerné (optionnel)</label>
+        <select id="rdv-edu" style="width:100%;border:1.5px solid var(--gray-border);border-radius:6px;padding:8px 10px;font-size:14px;font-family:var(--font)">
+          <option value="">— Aucun —</option>
+        </select>
+      </div>
+      <div class="fg">
+        <label>Lieu (optionnel)</label>
+        <input type="text" id="rdv-lieu" placeholder="Ex: Hôpital de Lisieux">
+      </div>
+    </div>
+    <div class="fg">
+      <label>Notes</label>
+      <textarea id="rdv-notes" style="width:100%;border:1.5px solid var(--gray-border);border-radius:6px;padding:8px 10px;font-size:13px;font-family:var(--font);height:60px;resize:vertical" placeholder="Informations complémentaires..."></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="mbtn" onclick="cl('m-rdv')">Annuler</button>
+      <button class="mbtn danger" id="rdv-del-btn" onclick="deleteRdv()" style="display:none">Supprimer</button>
+      <button class="mbtn prim" onclick="saveRdv()">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
 <!-- Modal colonne -->
 <div id="m-col" class="mbk">
   <div class="modal">
@@ -575,7 +713,8 @@ body.edu-mode .chip:hover .cx{opacity:1}
 // CONFIGURATION
 // ════════════════════════════════════════════════
 // Firebase remplacé par API locale (voir API_URL ci-dessus)
-var ADMIN_PW = 'EDT2026';   // Mot de passe administrateur
+var ADMIN_PW     = 'EDT2026';    // Mot de passe administrateur principal
+var ADMIN_RDV_PW = 'RDV2026';    // Mot de passe administrateur rendez-vous
 
 // Sites et catégories
 var SITES = {
@@ -644,7 +783,10 @@ var S = {
       uas2: { acts:mkActs(), cols:mkCols(), cells:{} },
     }
   },
-  backups: []
+  backups: [],
+  rdvs: [],
+  repasInfo: {},
+  transportData: {}
 };
 
 // Session
@@ -958,6 +1100,9 @@ function sanitizeAll(data){
     }
   }
   data.eduAccounts=sanitizeArr(data.eduAccounts);
+  data.rdvs=sanitizeArr(data.rdvs);
+  if(!data.repasInfo)data.repasInfo={};
+  if(!data.transportData)data.transportData={};
   return data;
 }
 
@@ -1079,6 +1224,7 @@ function closePw(){ document.getElementById('pw-modal').classList.remove('show')
 function doPw(){
   var pw=document.getElementById('pw-inp').value.trim();
   if(pw===ADMIN_PW){ closePw(); loginAdmin(); }
+  else if(pw===ADMIN_RDV_PW){ closePw(); loginAdminRdv(); }
   else showPwErr();
 }
 function showPwErr(){
@@ -1090,7 +1236,7 @@ function showPwErr(){
 function loginAdmin(){
   session.role='admin';
   document.body.classList.add('is-admin');
-  document.body.classList.remove('edu-mode');
+  document.body.classList.remove('is-admin-rdv','edu-mode');
   document.getElementById('screen-login').style.display='none';
   document.getElementById('role-badge').textContent='Administrateur';
   showTopbar();
@@ -1102,6 +1248,24 @@ function loginAdmin(){
   showSchedule();
 }
 
+function loginAdminRdv(){
+  session.role='admin-rdv';
+  document.body.classList.add('is-admin-rdv');
+  document.body.classList.remove('is-admin','is-admin-rdv','edu-mode');
+  document.getElementById('screen-login').style.display='none';
+  var rb=document.getElementById('role-badge');
+  rb.textContent='Admin RDV';
+  rb.style.background='rgba(124,58,237,.3)';
+  rb.style.borderColor='rgba(124,58,237,.5)';
+  showTopbar();
+  // Masquer les boutons non accessibles
+  document.getElementById('btn-admin-panel').style.display='none';
+  startSync();
+  session.siteId='clem';
+  session.catId=null;
+  buildNavTabs();
+  showSchedule();
+}
 function loginEduDirect(){
   // No password - direct access to both sites
   loginEdu({id:'direct',name:'Educateur',sites:['clem','rdh']});
@@ -1157,7 +1321,7 @@ function doLogout(){
   session={role:null,siteId:null,catId:null,eduId:null,allowedSites:[]};
   currentDay='lun';
   currentPeriod='am';
-  document.body.classList.remove('is-admin','edu-mode');
+  document.body.classList.remove('is-admin','is-admin-rdv','edu-mode');
   hideAllScreens();
   document.getElementById('topbar').style.display='none';
   document.getElementById('navtabs').style.display='none';
@@ -1172,7 +1336,7 @@ function showTopbar(){
   document.getElementById('topbar').style.display='flex';
 }
 function hideAllScreens(){
-  ['screen-site','screen-cat','layout','screen-admin','screen-repas','screen-transport'].forEach(function(id){
+  ['screen-site','screen-cat','layout','screen-admin','screen-repas','screen-transport','screen-rdv'].forEach(function(id){
     var el=document.getElementById(id);
     el.style.display='none';
   });
@@ -1180,6 +1344,14 @@ function hideAllScreens(){
 }
 
 function buildNavTabs(){
+  if(session.role==='admin-rdv'){
+    // Admin RDV: voir l'EDT + accès RDV
+    var nt=document.getElementById('navtabs');
+    nt.style.display='block';
+    nt.innerHTML='<button class="ntab on">Emploi du temps</button>'+
+      '<button class="ntab rdv-only" onclick="openRdvScreen()" style="display:inline-block;color:#7c3aed">Rendez-vous</button>';
+    return;
+  }
   // Admin only: tabs for each site + admin panel
   if(session.role!=='admin'){document.getElementById('navtabs').style.display='none';return;}
   var nt=document.getElementById('navtabs');
@@ -1683,8 +1855,9 @@ function aD(e){e.preventDefault();}
 function makeChip(yid,key){
   var y=getP('young',yid);if(!y)return null;
   var d2=document.createElement('div');
-  d2.className='chip';d2.draggable=true;d2.title=y.n;
+  d2.className='chip rdv-slot';d2.draggable=true;d2.title=y.n;
   d2.dataset.yid=yid;d2.dataset.key=key;
+  d2.style.position='relative';
   var btn=document.createElement('button');
   btn.className='cx';btn.textContent='\u2715';
   btn.addEventListener('click',function(ev){rmY(key,yid,ev);});
@@ -1693,6 +1866,16 @@ function makeChip(yid,key){
   if(y.p){var img=document.createElement('img');img.src=y.p;img.style.cssText='width:100%;height:100%;object-fit:cover;border-radius:4px;pointer-events:none';av.appendChild(img);}
   else{av.textContent=ini(y.n);}
   d2.appendChild(av);d2.appendChild(btn);
+  // Bulle RDV si ce jeune a un RDV ce jour
+  var rdvsJeune=getRdvsForYoungDay(yid,currentDay);
+  if(rdvsJeune.length){
+    var bubble=document.createElement('div');
+    bubble.className='rdv-bubble';
+    bubble.title='RDV: '+rdvsJeune[0].motif+(rdvsJeune[0].heure?' à '+rdvsJeune[0].heure:'');
+    bubble.textContent='\uD83D\uDCC5';
+    bubble.addEventListener('click',function(ev){ev.stopPropagation();openEditRdv(rdvsJeune[0].id);});
+    d2.appendChild(bubble);
+  }
   d2.addEventListener('dragstart',function(ev){sD(yid,'young',key,ev);});
   d2.addEventListener('dragend',eD);
   return d2;
@@ -1918,6 +2101,174 @@ function scheduleWeeklyBackup(){
     manualSave();
     localStorage.setItem('apaei-lastbk',String(now));
   }
+}
+
+// ════════════════════════════════════════════════
+// MODULE RENDEZ-VOUS
+// S.rdvs = [{id, yid, eid, day, heure, duree, motif, lieu, notes, siteId}]
+// ════════════════════════════════════════════════
+function getRdvs(){return sanitizeArr(S.rdvs);}
+
+function getRdvsForDay(dayId){
+  var sid=session.siteId||'clem';
+  return getRdvs().filter(function(r){return r.day===dayId&&(r.siteId===sid||!r.siteId);});
+}
+
+function getRdvsForYoungDay(yid,dayId){
+  var sid=session.siteId||'clem';
+  return getRdvs().filter(function(r){return r.yid===yid&&r.day===dayId&&(r.siteId===sid||!r.siteId);});
+}
+
+function openRdvScreen(){
+  hideAllScreens();
+  document.getElementById('screen-rdv').style.display='flex';
+  document.getElementById('daytabs').style.display='none';
+  renderRdvScreen();
+}
+function closeRdv(){
+  hideAllScreens();
+  document.getElementById('layout').style.display='flex';
+  document.getElementById('daytabs').style.display='block';
+}
+
+function renderRdvScreen(){
+  var container=document.getElementById('rdv-list-container');
+  var rdvs=getRdvs();
+  var sid=session.siteId||'clem';
+  rdvs=rdvs.filter(function(r){return r.siteId===sid||!r.siteId;});
+
+  if(!rdvs.length){
+    container.innerHTML='<div style="color:var(--gray);font-size:14px;text-align:center;padding:40px">Aucun rendez-vous enregistré.</div>';
+    return;
+  }
+
+  var byDay={};
+  DAYS.forEach(function(d){byDay[d.id]=[];});
+  rdvs.forEach(function(r){if(byDay[r.day])byDay[r.day].push(r);});
+
+  var html='';
+  DAYS.forEach(function(day){
+    var list=byDay[day.id];
+    if(!list.length)return;
+    html+='<div class="rdv-day-section"><div class="rdv-day-title">'+day.l+' ('+list.length+' RDV)</div>';
+    list.sort(function(a,b){return (a.heure||'').localeCompare(b.heure||'');});
+    list.forEach(function(r){
+      var y=getP('young',r.yid);
+      var e=r.eid?getP('edu',r.eid):null;
+      if(!y)return;
+      var av=y.p?'<img src="'+y.p+'">':ini(y.n);
+      var durLabel=r.duree==='0'?'Toute la journée':r.duree+'min';
+      var isAdmin=session.role==='admin'||session.role==='admin-rdv';
+      var actions=isAdmin?'<div class="rdv-actions">'+
+        '<button class="mbtn" style="padding:3px 8px;font-size:11px" onclick="openEditRdv(\''+r.id+'\')">✏️</button>'+
+        '<button class="mbtn danger" style="padding:3px 8px;font-size:11px" onclick="deleteRdvById(\''+r.id+'\')">✕</button>'+
+      '</div>':'';
+      html+='<div class="rdv-card">'+
+        '<div class="rdv-card-avatar">'+av+'</div>'+
+        '<div class="rdv-card-info">'+
+          '<div class="rdv-card-name">'+y.n+'</div>'+
+          '<div class="rdv-card-motif">'+r.motif+'</div>'+
+          '<div class="rdv-card-meta">'+
+            (r.heure?'<span class="rdv-tag rdv-tag-time">'+r.heure+(r.duree&&r.duree!=='0'?' • '+durLabel:'')+'</span>':'')+
+            (e?'<span class="rdv-tag rdv-tag-edu">'+e.n+'</span>':'')+
+            (r.lieu?'<span class="rdv-tag" style="background:#f0fdf4;color:#16a34a">'+r.lieu+'</span>':'')+
+          '</div>'+
+          (r.notes?'<div style="font-size:11px;color:var(--gray);margin-top:4px">'+r.notes+'</div>':'')+
+        '</div>'+
+        actions+
+      '</div>';
+    });
+    html+='</div>';
+  });
+  container.innerHTML=html;
+}
+
+function openAddRdv(){
+  document.getElementById('m-rdv-title').textContent='Nouveau rendez-vous';
+  document.getElementById('rdv-edit-id').value='';
+  document.getElementById('rdv-del-btn').style.display='none';
+  document.getElementById('rdv-motif').value='';
+  document.getElementById('rdv-heure').value='09:00';
+  document.getElementById('rdv-duree').value='60';
+  document.getElementById('rdv-lieu').value='';
+  document.getElementById('rdv-notes').value='';
+  document.getElementById('rdv-day').value=currentDay;
+  // Populate selects
+  var ysel=document.getElementById('rdv-yid');
+  ysel.innerHTML=getYoungs().map(function(y){return'<option value="'+y.id+'">'+y.n+'</option>';}).join('');
+  var esel=document.getElementById('rdv-edu');
+  esel.innerHTML='<option value="">— Aucun —</option>'+getEdus().map(function(e){return'<option value="'+e.id+'">'+e.n+'</option>';}).join('');
+  op('m-rdv');
+}
+
+function openEditRdv(id){
+  var r=getRdvs().find(function(x){return x.id===id;});
+  if(!r)return;
+  document.getElementById('m-rdv-title').textContent='Modifier le rendez-vous';
+  document.getElementById('rdv-edit-id').value=id;
+  document.getElementById('rdv-del-btn').style.display='inline-block';
+  document.getElementById('rdv-motif').value=r.motif||'';
+  document.getElementById('rdv-heure').value=r.heure||'09:00';
+  document.getElementById('rdv-duree').value=r.duree||'60';
+  document.getElementById('rdv-lieu').value=r.lieu||'';
+  document.getElementById('rdv-notes').value=r.notes||'';
+  document.getElementById('rdv-day').value=r.day||currentDay;
+  var ysel=document.getElementById('rdv-yid');
+  ysel.innerHTML=getYoungs().map(function(y){return'<option value="'+y.id+'"'+(y.id===r.yid?' selected':'')+'>'+y.n+'</option>';}).join('');
+  var esel=document.getElementById('rdv-edu');
+  esel.innerHTML='<option value="">— Aucun —</option>'+getEdus().map(function(e){return'<option value="'+e.id+'"'+(e.id===r.eid?' selected':'')+'>'+e.n+'</option>';}).join('');
+  op('m-rdv');
+}
+
+function saveRdv(){
+  var motif=document.getElementById('rdv-motif').value.trim();
+  if(!motif){ntf('Entrez un motif.');return;}
+  var yid=document.getElementById('rdv-yid').value;
+  if(!yid){ntf('Sélectionnez un jeune.');return;}
+  var editId=document.getElementById('rdv-edit-id').value;
+  var rdv={
+    id:editId||uid(),
+    yid:yid,
+    eid:document.getElementById('rdv-edu').value||'',
+    day:document.getElementById('rdv-day').value,
+    heure:document.getElementById('rdv-heure').value,
+    duree:document.getElementById('rdv-duree').value,
+    motif:motif,
+    lieu:document.getElementById('rdv-lieu').value.trim(),
+    notes:document.getElementById('rdv-notes').value.trim(),
+    siteId:session.siteId||'clem',
+    createdAt:new Date().toISOString()
+  };
+  if(!S.rdvs)S.rdvs=[];
+  if(editId){S.rdvs=S.rdvs.filter(function(r){return r.id!==editId;});}
+  S.rdvs.push(rdv);
+  cl('m-rdv');
+  render();saveToFirebase();
+  if(document.getElementById('screen-rdv').style.display!=='none')renderRdvScreen();
+  ntf(editId?'Rendez-vous modifié.':'Rendez-vous créé.');
+}
+
+function deleteRdv(){
+  var id=document.getElementById('rdv-edit-id').value;
+  if(!id)return;
+  deleteRdvById(id);
+  cl('m-rdv');
+}
+function deleteRdvById(id){
+  if(!confirm('Supprimer ce rendez-vous ?'))return;
+  S.rdvs=(S.rdvs||[]).filter(function(r){return r.id!==id;});
+  render();saveToFirebase();
+  if(document.getElementById('screen-rdv').style.display!=='none')renderRdvScreen();
+  ntf('Rendez-vous supprimé.');
+}
+
+// Afficher bulle RDV sur une case du tableau
+function renderRdvBubble(dayId,slotId,yid){
+  var rdvs=getRdvsForYoungDay(yid,dayId);
+  if(!rdvs.length)return'';
+  return rdvs.map(function(r){
+    return '<div class="rdv-bubble" onclick="openEditRdv(\''+r.id+'\')" title="RDV: '+r.motif+(r.heure?' à '+r.heure:'')+'">&#128197;</div>';
+  }).join('');
 }
 
 // ════════════════════════════════════════════════
