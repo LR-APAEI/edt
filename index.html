@@ -8,6 +8,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#2c4a6e">
 <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="APAEI-EDT">
 <title>DAME — EDT</title>
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA4MCA5MiI+CiAgPHBvbHlnb24gcG9pbnRzPSI0MCw0IDc2LDI0IDc2LDY4IDQwLDg4IDQsNjggNCwyNCIgZmlsbD0iIzJjNGE2ZSIvPgogIDx0ZXh0IHg9IjQwIiB5PSI0NiIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZm9udC1mYW1pbHk9InN5c3RlbS11aSxBcmlhbCxzYW5zLXNlcmlmIiBmb250LXNpemU9IjE4IiBmb250LXdlaWdodD0iODAwIiBmaWxsPSJ3aGl0ZSI+REFNRTwvdGV4dD4KICA8dGV4dCB4PSI0MCIgeT0iNjQiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZvbnQtZmFtaWx5PSJzeXN0ZW0tdWksQXJpYWwsc2Fucy1zZXJpZiIgZm9udC1zaXplPSIxMSIgZmlsbD0icmdiYSgyNTUsMjU1LDI1NSwwLjYpIiBsZXR0ZXItc3BhY2luZz0iNCI+RURUPC90ZXh0Pgo8L3N2Zz4=">
@@ -727,9 +728,9 @@ body.edu-mode .chip:hover .cx{opacity:1}
 <script>
 // ═══ VARIABLES GLOBALES ═══
 var _photos={};
-// (var déclaré en haut)
+var _saving=false;
 var _savedAt=0;
-// (var déclaré en haut)
+var _lastHash='';
 var _saveTimeout=null;
 var syncTimer=null;
 // ══════════════════════════
@@ -1928,24 +1929,16 @@ function importPhotos(e){
 
 function manualSave(){
   var label='Sauvegarde du '+new Date().toLocaleString('fr-FR');
-  // Sauvegarde via l'API /backups (séparée du planning principal)
-  apiCall('POST','/backups',{label:label,data:S},function(err){
-    if(!err){
-      // Mettre à jour l'affichage
-      var log=document.getElementById('save-log');
-      if(log)log.textContent='Dernière sauvegarde : '+label;
-      ntf('Sauvegarde créée.');
-    } else {
-      // Fallback: sauvegarder dans localStorage
-      try{
-        var bk=JSON.parse(localStorage.getItem('apaei-backups')||'[]');
-        bk.unshift({date:label,data:JSON.stringify(S)});
-        if(bk.length>5)bk=bk.slice(0,5);
-        localStorage.setItem('apaei-backups',JSON.stringify(bk));
-        ntf('Sauvegarde locale créée (hors ligne).');
-      }catch(e){ntf('Erreur de sauvegarde.');}
-    }
-  });
+  // Sauvegarde dans localStorage uniquement
+  try{
+    var bk=JSON.parse(localStorage.getItem('apaei-backups')||'[]');
+    bk.unshift({date:label,data:JSON.stringify(S)});
+    if(bk.length>5)bk=bk.slice(0,5);
+    localStorage.setItem('apaei-backups',JSON.stringify(bk));
+    var log=document.getElementById('save-log');
+    if(log)log.textContent='Dernière sauvegarde : '+label;
+    ntf('Sauvegarde créée.');
+  }catch(e){ntf('Erreur de sauvegarde.');}
 }
 
 function exportJson(){
