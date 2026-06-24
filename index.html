@@ -543,8 +543,10 @@ body.edu-mode .chip:hover .cx{opacity:1}
   }
 }</div>
     <div class="form-row" style="margin-top:10px">
-      <a href="https://console.firebase.google.com" target="_blank" class="fbtn fbtn-blue" style="text-decoration:none;padding:7px 14px;display:inline-block">Ouvrir Firebase Console</a>
+      <button id="fb-test-btn" class="fbtn fbtn-blue" onclick="testFirebase()">Tester la connexion</button>
+      <a href="https://console.firebase.google.com" target="_blank" class="fbtn fbtn-gray" style="text-decoration:none;padding:7px 14px;display:inline-block">Ouvrir Firebase Console</a>
     </div>
+  <div id="fb-test-log" style="font-size:12px;margin-top:6px;font-weight:600"></div>
   </div>
 
   <div class="admin-section">
@@ -1191,12 +1193,40 @@ function startSync(){
   // After initial load, start SSE for real-time updates
   // SSE will push changes from other devices instantly
 }
-function setSS(s){
+function setSS(s,detail){
   var el=document.getElementById('sync-badge');
   if(!el)return;
-  if(s==='ok'){el.textContent='En ligne';el.className='ok';}
+  if(s==='ok'){el.textContent='En ligne';el.className='ok';el.title='';}
   else if(s==='spin'){el.textContent='Sync...';el.className='spin';}
-  else{el.textContent='Hors ligne';el.className='err';}
+  else if(s==='rules'){
+    el.textContent='Règles Firebase';el.className='err';
+    el.title='Firebase Console → Règles → .read:true .write:true';
+    if(!window._rulesWarned){window._rulesWarned=true;ntf('Règles Firebase à corriger');}
+  }
+  else{el.textContent='Hors ligne';el.className='err';el.title=detail||'';}
+}
+
+function testFirebase(){
+  var btn=document.getElementById('fb-test-btn');
+  if(btn)btn.textContent='Test...';
+  var xhr=new XMLHttpRequest();
+  xhr.open('GET',FB+'/.json?t='+Date.now(),true);
+  xhr.timeout=8000;
+  var done=function(msg,ok){
+    if(btn)btn.textContent='Tester la connexion';
+    ntf(msg);
+    var log=document.getElementById('fb-test-log');
+    if(log){log.textContent=msg;log.style.color=ok?'green':'#dc2626';}
+  };
+  xhr.onreadystatechange=function(){
+    if(xhr.readyState!==4)return;
+    if(xhr.status===200)done('✅ Firebase OK — connexion établie',true);
+    else if(xhr.status===401||xhr.status===403)done('🔒 Accès refusé ('+xhr.status+') — Règles Firebase à corriger',false);
+    else done('⚠️ Erreur HTTP '+xhr.status,false);
+  };
+  xhr.ontimeout=function(){done('⏱ Timeout — Firebase ne répond pas',false);};
+  xhr.onerror=function(){done('❌ Erreur réseau — pas de connexion',false);};
+  xhr.send();
 }
 
 // ════════════════════════════════════════════════
