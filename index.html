@@ -1845,87 +1845,73 @@ function exportPhotos(){
 }
 
 function importPhotos(e){
-  var file=e.target.files[0];if(!file)return;
+  var file=e.target.files[0];
+  if(!file)return;
   var reader=new FileReader();
   reader.onload=function(ev){
+    var count=0;
     try{
-      var data=JSON.parse(ev.target.result);
-      var count=0;
-      var photosByName={};
+      var raw=ev.target.result;
+      var data=JSON.parse(raw);
+      var photos={};
 
-      // Détecter le format
-      if(data._type==='dame-edt-photos-by-name'&&data.photos){
-        photosByName=data.photos;
-      } else {
-        // Format direct {id:base64} ou {nom:base64}
-        if(data._type==='dame-edt-photos-by-id'&&data.photos){
-          // Import direct par ID - le plus rapide
-          Object.keys(data.photos).forEach(function(id){
-            if(data.photos[id]&&data.photos[id].length>10){
-              _photos[id]=data.photos[id];
-              count++;
+      // Format par ID direct (toutes-photos.json)
+      if(data._type==='dame-edt-photos-by-id'&&data.photos){
+        photos=data.photos;
+        Object.keys(photos).forEach(function(id){
+          if(photos[id]&&photos[id].length>50){_photos[id]=photos[id];count++;}
+        });
+      }
+      // Format par nom (educateurs-photos.json / jeunes-photos.json)
+      else if(data._type==='dame-edt-photos-by-name'&&data.photos){
+        var byName=data.photos;
+        // Collecter toutes les personnes
+        var persons=[];
+        try{
+          ['clem','rdh'].forEach(function(sid){
+            var sd=S.data&&S.data[sid];if(!sd)return;
+            if(sd.persons){
+              (sd.persons.young||[]).forEach(function(p){if(p&&p.id&&p.n)persons.push(p);});
+              (sd.persons.edu||[]).forEach(function(p){if(p&&p.id&&p.n)persons.push(p);});
             }
           });
-          try{localStorage.setItem('apaei-edt-photos',JSON.stringify(_photos));}catch(ex){}
-          render();renderAdmin();
-          ntf(count+' photo'+(count>1?'s':'')+' chargée'+(count>1?'s':''));
-          return;
+        }catch(e2){}
+        function norm(s){
+          try{return s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z]/g,'');}
+          catch(e){return s.toLowerCase().replace(/[^a-z]/g,'');}
         }
+        Object.keys(byName).forEach(function(name){
+          var photo=byName[name];
+          if(!photo||photo.length<50)return;
+          var fn=norm(name);
+          var best=null;
+          persons.forEach(function(p){
+            var pn=norm(p.n);
+            if(pn===fn||pn.indexOf(fn)>=0||fn.indexOf(pn)>=0){
+              if(!best)best=p;
+            }
+          });
+          if(best){_photos[best.id]=photo;best.p=photo;count++;}
+          else{_photos['_n_'+name]=photo;count++;}
+        });
+      }
+      // Format inconnu - essayer par ID directement
+      else{
         Object.keys(data).forEach(function(k){
-          if(!k.startsWith('_')&&data[k]&&typeof data[k]==='string'&&data[k].length>10){
-            photosByName[k]=data[k];
+          var v=data[k];
+          if(typeof v==='string'&&v.length>50&&!k.startsWith('_')){
+            _photos[k]=v;count++;
           }
         });
       }
 
-      // Collecter toutes les personnes de tous les sites
-      var allPersons=[];
-      ['clem','rdh'].forEach(function(sid){
-        var sdata=S.data&&S.data[sid];
-        if(!sdata)return;
-        // Personnes directes
-        if(sdata.persons){
-          sanitizeArr(sdata.persons.young).forEach(function(p){if(p&&p.id)allPersons.push(p);});
-          sanitizeArr(sdata.persons.edu).forEach(function(p){if(p&&p.id)allPersons.push(p);});
-        }
-        // RDH cats aussi
-        if(sdata.sees1&&sdata.sees1.persons){
-          sanitizeArr(sdata.sees1.persons.young).forEach(function(p){if(p&&p.id)allPersons.push(p);});
-        }
-      });
-
-      // Associer chaque photo à la bonne personne par nom
-      Object.keys(photosByName).forEach(function(name){
-        var photo=photosByName[name];
-        if(!photo||photo.length<100)return;
-        var fn=name.toLowerCase().trim().replace(/[^a-z]/g,'');
-        // Chercher match dans les personnes
-        var best=null;
-        allPersons.forEach(function(p){
-          if(!p||!p.n)return;
-          var pn=p.n.toLowerCase().trim().replace(/[^a-z]/g,'');
-          if(pn===fn||pn.startsWith(fn)||fn.startsWith(pn)){
-            if(!best||p.n.length<best.n.length)best=p;
-          }
-        });
-        if(best){
-          _photos[best.id]=photo;
-          best.p=photo;
-          count++;
-        } else {
-          // Stocker par nom pour association ultérieure
-          _photos['_n_'+fn]=photo;
-          count++;
-        }
-      });
-
-      try{localStorage.setItem('apaei-edt-photos',JSON.stringify(_photos));}catch(ex2){}
+      try{localStorage.setItem('apaei-edt-photos',JSON.stringify(_photos));}catch(e3){}
       render();
-      renderAdmin();
-      ntf(count+' photo'+(count>1?'s':'')+' chargée'+(count>1?'s':''));
+      try{renderAdmin();}catch(e4){}
+      ntf(count+' photo'+(count>1?'s':'')+' importée'+(count>1?'s':''));
     }catch(ex){
-      console.error('Import photos error:',ex);
-      ntf('Erreur import: '+ex.message);
+      ntf('Erreur: '+ex.message);
+      console.error(ex);
     }
   };
   reader.readAsText(file);
