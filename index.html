@@ -906,14 +906,13 @@ function fbWrite(path,data,cb){
 }
 function savePhoto(id,b64){
   _photos[id]=b64;
+  // Photos stockées UNIQUEMENT en local - jamais dans Firebase
   try{localStorage.setItem('apaei-edt-photos',JSON.stringify(_photos));}catch(e){}
-  // Écrire la photo dans Firebase /photos/ID (chemin séparé du planning)
-  fbWrite('/photos/'+id,b64,null);
+  // Note: ne pas envoyer à Firebase pour éviter surcharge bande passante
 }
 function deletePhoto(id){
   delete _photos[id];
   try{localStorage.setItem('apaei-edt-photos',JSON.stringify(_photos));}catch(e){}
-  fbWrite('/photos/'+id,null,null);
 }
 function getPhoto(id){return _photos[id]||'';}
 
@@ -927,18 +926,9 @@ function loadPhotos(){
   }catch(e){}
 }
 function loadPhotosFromFirebase(cb){
-  if(_photosLoaded){if(cb)cb();return;}
-  fbRead('/photos',function(err,data){
-    _photosLoaded=true;
-    if(err||!data){if(cb)cb();return;}
-    if(typeof data==='object'&&!Array.isArray(data)){
-      Object.keys(data).forEach(function(id){
-        if(data[id]&&data[id].length>10)_photos[id]=data[id];
-      });
-    }
-    try{localStorage.setItem('apaei-edt-photos',JSON.stringify(_photos));}catch(e){}
-    if(cb)cb();
-  });
+  // Photos stockées uniquement en localStorage - pas de téléchargement Firebase
+  _photosLoaded=true;
+  if(cb)cb();
 }
 
 // Créer une version SANS photos pour Firebase (légère)
@@ -1133,9 +1123,29 @@ function saveToFirebase(cb){
     var light={};
     try{
       var str=JSON.stringify(S);
-      str=str.replace(/"p":"data:[^"]{20,}"/g,'"p":""');
+      // Supprimer TOUTES les photos base64 avant envoi Firebase
+      str=str.replace(/"p":"data:[^"]{10,}"/g,'"p":""');
+      // Supprimer aussi les backups volumineux
       light=JSON.parse(str);
-    }catch(e){light=S;}
+      delete light.backups; // backups stockés séparément
+      // Vérification taille: refuser si > 500KB
+      var lightStr=JSON.stringify(light);
+      if(lightStr.length>500000){
+        console.warn('Données trop volumineuses ('+Math.round(lightStr.length/1024)+'KB), photos non supprimées?');
+        // Forcer suppression photos en profondeur
+        function deepStrip(obj){
+          if(!obj||typeof obj!=='object')return;
+          if(Array.isArray(obj)){obj.forEach(deepStrip);return;}
+          Object.keys(obj).forEach(function(k){
+            if(k==='p'&&typeof obj[k]==='string'&&obj[k].length>100)obj[k]='';
+            else deepStrip(obj[k]);
+          });
+        }
+        deepStrip(light);
+        lightStr=JSON.stringify(light);
+        console.log('Après nettoyage:', Math.round(lightStr.length/1024)+'KB');
+      }
+    }catch(e){light={};}
     fbWrite('/edt',light,function(err){
       clearTimeout(_saveTimeout);
       _saving=false;
