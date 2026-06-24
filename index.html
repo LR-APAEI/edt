@@ -1091,32 +1091,29 @@ function sanitizeAll(data){
 }
 
 function loadFromFirebase(){
+  // ÉTAPE 1 : afficher immédiatement avec données locales (zéro page blanche)
+  loadPhotos();
+  loadLocal();
+  render();
   setSS('spin');
-  // 1. Charger les photos Firebase d'abord (une seule fois)
-  loadPhotosFromFirebase(function(){
-    // 2. Puis charger le planning (sans photos, léger)
-    fbRead('/edt',function(err,data){
-      if(err){setSS('err');loadLocal();render();startPolling();return;}
-      if(data){
-        sanitizeAll(data);
-        S=Object.assign(S,data);
-      } else {
-        saveToFirebase();
-      }
-      // 3. Réinjecter les photos dans les personnes
-      function reinjectAll(obj){
-        if(!obj||typeof obj!=='object')return;
-        if(Array.isArray(obj)){obj.forEach(reinjectAll);return;}
-        if(obj.id&&'p' in obj&&_photos[obj.id])obj.p=_photos[obj.id];
-        Object.values(obj).forEach(reinjectAll);
-      }
-      reinjectAll(S);
-      _lastHash=dataHash(S);
-      try{localStorage.setItem('apaei-edt',JSON.stringify(stripPhotos(S)));}catch(e){}
-      setSS('ok');
-      render();
+  // ÉTAPE 2 : charger depuis Firebase en arrière-plan
+  fbRead('/edt',function(err,data){
+    if(err){
+      setSS('err');
       startPolling();
-    });
+      return;
+    }
+    if(data){
+      sanitizeAll(data);
+      S=Object.assign(S,data);
+    } else {
+      saveToFirebase();
+    }
+    _lastHash=dataHash(S);
+    try{localStorage.setItem('apaei-edt',JSON.stringify(S));}catch(e){}
+    setSS('ok');
+    render();
+    startPolling();
   });
 }
 function saveToFirebase(cb){
