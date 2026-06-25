@@ -935,14 +935,16 @@ function fbWrite(path,data,cb){
   xhr.send(data!=null?JSON.stringify(data):null);
 }
 function savePhoto(id,b64){
+  // Stocker en local
   _photos[id]=b64;
-  // Photos stockées UNIQUEMENT en local - jamais dans Firebase
   try{localStorage.setItem('apaei-edt-photos',JSON.stringify(_photos));}catch(e){}
-  // Note: ne pas envoyer à Firebase pour éviter surcharge bande passante
+  // Stocker dans Firebase /photos (photos compressées = ~4KB chacune = OK)
+  fbWrite('/photos/'+id,b64,null);
 }
 function deletePhoto(id){
   delete _photos[id];
   try{localStorage.setItem('apaei-edt-photos',JSON.stringify(_photos));}catch(e){}
+  fbWrite('/photos/'+id,null,null); // supprimer de Firebase aussi
 }
 function getPhoto(id){return _photos[id]||'';}
 
@@ -956,9 +958,20 @@ function loadPhotos(){
   }catch(e){}
 }
 function loadPhotosFromFirebase(cb){
-  // Photos stockées uniquement en localStorage - pas de téléchargement Firebase
-  _photosLoaded=true;
-  if(cb)cb();
+  if(_photosLoaded){if(cb)cb();return;}
+  // Charger photos depuis Firebase /photos (compressées, légères)
+  fbRead('/photos',function(err,data){
+    _photosLoaded=true;
+    if(!err&&data&&typeof data==='object'){
+      Object.keys(data).forEach(function(id){
+        if(data[id]&&data[id].length>10&&!_photos[id]){
+          _photos[id]=data[id];
+        }
+      });
+      try{localStorage.setItem('apaei-edt-photos',JSON.stringify(_photos));}catch(e){}
+    }
+    if(cb)cb();
+  });
 }
 
 // Créer une version SANS photos pour Firebase (légère)
@@ -2169,9 +2182,26 @@ function openAdd(type,id){
 }
 function prevPhoto(e){
   var f=e.target.files[0];if(!f)return;
-  var r=new FileReader();
-  r.onload=function(ev){photoData=ev.target.result;document.getElementById('mp-prev').innerHTML='<img src="'+photoData+'">';};
-  r.readAsDataURL(f);
+  var reader=new FileReader();
+  reader.onload=function(ev){
+    // Compresser à 100x100 JPEG qualité 70 → ~4KB max
+    var img=new Image();
+    img.onload=function(){
+      var canvas=document.createElement('canvas');
+      canvas.width=100;canvas.height=100;
+      var ctx=canvas.getContext('2d');
+      // Recadrage centré
+      var s=Math.min(img.width,img.height);
+      var sx=(img.width-s)/2, sy=(img.height-s)/2;
+      ctx.drawImage(img,sx,sy,s,s,0,0,100,100);
+      photoData=canvas.toDataURL('image/jpeg',0.70);
+      document.getElementById('mp-prev').innerHTML='<img src="'+photoData+'" style="width:80px;height:80px;border-radius:8px;object-fit:cover">';
+      var kb=Math.round(photoData.length/1024);
+      document.getElementById('mp-prev').innerHTML+='<div style="font-size:10px;color:var(--gray);margin-top:4px">'+kb+' KB</div>';
+    };
+    img.src=ev.target.result;
+  };
+  reader.readAsDataURL(f);
 }
 function savePerson(){
   var n=document.getElementById('mp-name').value.trim();
